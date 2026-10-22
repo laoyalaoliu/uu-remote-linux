@@ -31,6 +31,7 @@ mod webrtc;
 mod video;
 mod video_track;
 mod locked_video;
+mod record;
 #[cfg(test)]
 mod test_network;
 mod hevc;

@@ -124,6 +124,7 @@ viewer does not reconnect them automatically.
 | `UU_VIDEO_CODEC=h264` | force H.264 even when the viewer negotiated H.265 (default: H.265 when both sides support it) |
 | `UU_FFMPEG_ROOT` | FFmpeg prefix (`bin/ffmpeg`, libs in `lib/x86_64-linux-gnu`) |
 | `UU_AUDIO=0`, `UU_AUDIO_SOURCE` | disable sound / choose the Pulse source (default `@DEFAULT_MONITOR@`) |
+| `UU_RECORD_DIR` | when set, record each desktop session to MP4 in this directory (`src/record.rs`); unset/empty (default) records nothing and changes no behavior |
 | `UU_LOGIN_WINDOW=0` | don't auto-open the login window |
 | `UU_ENGINE_DIR` | directory holding `libuu-wayland.so` / `libuu-portal.so` (`--features engine-plugins`, used by release packages: engines are dlopen'ed only on Wayland sessions; also searched next to the binary, `../lib/uu-remote-linux`, `~/.local/lib/uu-remote-linux`, `/usr/lib/uu-remote-linux`) |
 | `UU_WOL_HELPER=1` | experimental: report LAN info (`api-ipv4…/api/v1/device/wake_on_lan/info` {mac, ip, subnet_mask}) after sign-in and answer `wake_on_lan` pushes (`target_device` {mac, ip, subnet_mask}) with a magic packet, like the official Windows host (field names from its log strings; not verified end to end). `wake_on_lan` push key names are always logged |
@@ -143,6 +144,7 @@ every 60 s.
 | `src/webrtc.rs` | peer connection, data channels, CONTROL dispatch, initialization messages |
 | `src/video.rs`, `src/capture_setting.rs`, `src/video_track.rs`, `src/hevc.rs` | FFmpeg H.264/H.265 pipeline, one video track for both codecs (RFC 7798 HEVC payloader); viewer quality/fps/resolution/chroma settings |
 | `src/locked_video.rs` | low-rate synthetic black video on the negotiated track while Portal is pending and locked; enables iPhone cold auto unlock (#29), requires FFmpeg libx264/libx265 for the selected codec |
+| `src/record.rs` | optional MP4 recording of the desktop stream (`UU_RECORD_DIR`, off by default): taps encoded access units in `stream_desktop`, muxes them with an FFmpeg `-c:v copy` child (HEVC as `hvc1`), one file per session segment; failures only log and never touch the stream |
 | `src/audio.rs` | Pulse/PipeWire monitor → Opus audio track |
 | `src/input.rs`, `src/input_mapping.rs`, `src/uinput.rs` | input injection (X11 XTest / Wayland / portal / uinput), Windows VK → keysym → evdev |
 | `src/cursor.rs` | pointer shape mirroring (X11) |

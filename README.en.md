@@ -336,6 +336,7 @@ Common environment variables:
 | `UU_VIDEO_ENCODER` | `cpu`: libx264; `vaapi`: opt-in Intel/AMD; `nvenc`: force NVENC; unset: NVENC only when an NVIDIA driver is loaded, else CPU |
 | `UU_VAAPI_BUFFER_MS` | VAAPI VBV buffer in ms (10-1000, VAAPI only); raise it when keyframes are squeezed into a blur at high resolution |
 | `UU_FFMPEG_ROOT` | Use FFmpeg from this prefix |
+| `UU_RECORD_DIR` | When set, record each remote desktop session to an MP4 file in this directory; unset (default) records nothing — see "Recording the remote desktop to MP4" below |
 | `UU_AUDIO=0` | Disable sound; `UU_AUDIO_SOURCE` picks the PulseAudio source |
 | `UU_REMOTE_ASSIST=0` | Disable remote assistance (no guest assistance before sign-in either) |
 | `UU_ASSIST_ALLOW=1` | Allow remote assistance at start (overrides the saved switch) |
@@ -350,6 +351,12 @@ Host settings such as "lock after remote session" and "mute host" are stored in
 Custom bitrate follows the Mbps value selected in the client; for example, 1 Mbps sets an encoder cap of 1000 kbit/s.
 
 With external FFmpeg CPU encoding, the bitrate presets (Original / Ultra / HD / custom) use average bitrate (ABR) to avoid gray keyframes at 4K and low bitrates; Auto keeps constant rate factor (CRF).
+
+## Recording the remote desktop to MP4
+
+Off by default. Set `UU_RECORD_DIR=<directory>` (created automatically if missing) and each remote desktop session is saved there as `uu-remote-<UTC timestamp>-<h264|h265>.mp4`; a mid-session codec/fps change starts a new segment file at the next keyframe. Ending the session finalizes the MP4 (index written), so the file is immediately playable and can be fetched through file transfer. The already-encoded stream is muxed with `-c:v copy` — no decoding or re-encoding, negligible CPU. Video only, no audio; the synthetic black frames sent while locked are not recorded. Recording failures (unwritable directory, FFmpeg failure, disk too slow/full) only log a warning and never interrupt the session.
+
+Notes: recordings contain everything shown on the desktop — treat the directory as private. Size follows the stream bitrate (about 9 GB/hour at the 20 Mbps Original preset, about 0.9 GB/hour at the 2 Mbps HD preset). HEVC recordings use the `hvc1` tag (plays in Apple players and VLC); players without HEVC-in-MP4 support need VLC, or force H.264 with `UU_VIDEO_CODEC=h264`. Frames are stamped at the session's nominal frame rate, so capture stalls are not preserved as pauses and a heavily stalled recording runs slightly shorter than wall-clock time.
 
 ## Let an AI agent install or develop it
 

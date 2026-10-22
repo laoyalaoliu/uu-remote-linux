@@ -926,6 +926,9 @@ pub async fn stream_desktop(pc: Arc<RTCPeerConnection>, track: Arc<crate::video_
     // Portal power/idle policy belongs to its CONTROL-scoped supervisor,
     // including when video has no frames or the user locks manually.
     if portal.is_none() { crate::capture::keep_display_awake()?; }
+    // Optional MP4 recording (UU_RECORD_DIR); None — and zero behavior change — when unset.
+    // Dropping the recorder at any return below closes its queue, which finalizes the file.
+    let recorder = crate::record::Recorder::start();
     let portal_stream = portal.is_some();
     let (latest, mut receiver) = mpsc::channel(4);
     let budget=Arc::new(Semaphore::new(4));
@@ -1001,6 +1004,13 @@ pub async fn stream_desktop(pc: Arc<RTCPeerConnection>, track: Arc<crate::video_
                 // A closed queue means the reader ended; its JoinHandle carries the reason.
                 let Some(frame) = frame else { return (&mut reader.0).await.map_err(|e| format!("Encoder reader task: {e}"))?; };
                 if !frame.matches(&current) { continue; }
+                // Tap the encoded access unit for the optional MP4 recording. This runs
+                // before the send on purpose: the recording mirrors what the encoder produced
+                // for this session even if the network send below is interrupted, and the
+                // recorder never blocks (a full queue just ends the recording).
+                if let Some(recorder) = &recorder {
+                    recorder.record_frame(frame.codec, current.fps, is_independent_frame_for(&frame.data, frame.codec), &frame.data);
+                }
                 let duration = timeline.duration_after(frame.completed_at);
                 if let Some(last) = previous { skipped += frame.sequence.saturating_sub(last + 1); }
                 max_age_ms = max_age_ms.max(frame.completed_at.elapsed().as_millis());
